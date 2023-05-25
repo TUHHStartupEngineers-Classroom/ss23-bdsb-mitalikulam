@@ -1,8 +1,110 @@
 ---
 title: "Data Acquisition"
-author: "Joschka Schwarz"
+author: "Mitali Kulam"
+format: "html"
+editor: "visual"
 ---
 
-::: callout-note
-You can delete everything in here and start fresh.
-:::
+# Load libraries
+
+```{r}
+library(RSQLite)
+library(dplyr)
+library(httr)
+library(glue)
+library(jsonlite)
+library(keyring)
+library("rstudioapi")
+library(rvest)
+
+```
+
+# -- Dtabase Connection object
+
+## Challenge Task
+
+# -- 1) Get some data via an API. There are millions of providers, that offer API access for free and have good documentation about how to query their service.
+
+# Send the GET request to the API
+
+```{r}
+
+response <- GET("https://www.themealdb.com/api/json/v1/1/filter.php?c=Seafood")
+
+```
+
+# Check the status code
+
+```{r}
+
+if (response$status_code == 200) {
+  # The request was successful
+  # Get the response data
+  rawToChar(response$content)
+  
+  meals_db <- response %>%
+    .$content %>%
+    rawToChar() %>%
+    fromJSON()
+  #-- Print the first 10 rows of your tibbles
+  head(meals_db)
+} else {
+  # The request failed
+  print(response$status_code)
+}
+```
+
+# -- 2) Scrape one of the competitor websites of canyon
+
+# Set the URL of the website to scrape
+
+```{r}
+url <- "https://www.rosebikes.de/"
+
+```
+
+# Scrape the website
+
+```{r}
+html <- read_html(url)
+```
+
+# Find the elements that contain the model names
+
+```{r}
+
+model_names <- html %>%
+  html_nodes(".products-slider-tile__product-name") %>%
+  html_text()
+```
+
+# Find the elements that contain the prices
+
+```{r}
+prices <- html %>%
+  html_nodes(".product-tile-price__current-value") %>%
+  html_text()
+```
+
+# Extract the number using regular expressions
+
+```{r}
+
+price <- gsub("[^0-9.,]", "", prices)  # Remove all non-digit, non-decimal, and non-comma characters
+
+```
+
+# Create a data frame of the model names and prices
+
+```{r}
+database <- data.frame(
+  Model = model_names,
+  Price = price
+)
+```
+
+# Print the data frame
+
+```{r}
+print(database)
+```
