@@ -1,8 +1,111 @@
 ---
 title: "Data Wrangling"
-author: "Joschka Schwarz"
+author: "Mitali Kulam"
+format: "html"
+editor: "visual"
 ---
 
-::: callout-note
-You can delete everything in here and start fresh.
-:::
+##2.0 Running code ###2.1 Load Libraries
+
+```{r}
+library(tidyverse)
+library(vroom)
+library(data.table)
+library(tictoc)
+library(dplyr)
+library(readxl)
+
+```
+
+### 2.2 Data import
+
+## Define column type for vroom
+
+```{r}
+col_types <- list(
+  id = col_character(),
+  type = col_character(),
+  number = col_character(),
+  country = col_character(),
+  date = col_date("%Y-%m-%d"),
+  abstract = col_character(),
+  title = col_character(),
+  kind = col_character(),
+  num_claims = col_double(),
+  filename = col_character(),
+  withdrawn = col_double()
+)
+```
+
+# -- Using Alternative 2: The reduced data set for the year 2014
+
+## Read the data into a tibble
+
+```{r}
+patent_tbl <- vroom(
+  file = "C:/Users/dell/Desktop/business data science/tidyverse/ss23-bdsb-mitalikulam/assets/wrangling/patent.tsv", 
+  delim = "\t"
+  #col_types = col_types,
+  #na = c("", "NA", "NULL")
+)
+
+assignee_tbl <- vroom(
+  file = "C:/Users/dell/Desktop/business data science/tidyverse/ss23-bdsb-mitalikulam/assets/wrangling/assignee.tsv", 
+  delim = "\t", 
+  col_types = col_types,
+  na = c("", "NA", "NULL")
+)
+
+patent_assignee_tbl <- vroom(
+  file = "C:/Users/dell/Desktop/business data science/tidyverse/ss23-bdsb-mitalikulam/assets/wrangling/patent_assignee.tsv", 
+  delim = "\t", 
+  col_types = col_types,
+  na = c("", "NA", "NULL")
+)
+
+uspc_tbl <- vroom(
+  file = "C:/Users/dell/Desktop/business data science/tidyverse/ss23-bdsb-mitalikulam/assets/wrangling/uspc.tsv", 
+  delim = "\t", 
+  col_types = col_types,
+  na = c("", "NA", "NULL")
+)
+```
+
+## Join Tables
+
+```{r}
+patent_joined_table <- patent_assignee_tbl %>%
+  inner_join(assignee_tbl, by = c("assignee_id" = "id")) %>%
+  inner_join(patent_tbl, by = c("patent_id" = "id"))
+
+```
+
+# Patent Dominance: What US company/corporation has the most patents?
+
+## List the 10 US companies with the most assigned/granted patents.
+
+```{r}
+us_patent_counts <- patent_joined_table %>%
+  group_by(organization) %>%
+  summarise(total_patents = n()) %>%
+  arrange(desc(total_patents))
+
+top_10_us_companies <- head(us_patent_counts, 10)
+
+top_10_us_companies
+```
+
+##What US organization had the most patents granted in August 2014? List the top 10 companies with the most new granted patents for August 2014.
+
+```{r}
+us_patent_counts_aug_2014 <- patent_joined_table %>%
+  filter(format(date, "%Y-%m") == "2014-08") %>%
+  group_by(organization) %>%
+  summarise(total_patents = n()) %>%
+  arrange(desc(total_patents)) %>%
+  select(organization, total_patents)
+
+top_10_us_companies_aug_2014 <- head(us_patent_counts_aug_2014, 10)
+
+top_10_us_companies_aug_2014
+```

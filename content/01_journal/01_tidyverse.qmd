@@ -1,98 +1,120 @@
 ---
 title: "Tidyverse"
-author: "Joschka Schwarz"
+author: "Mitali Kulam"
+format: "html"
+editor: "visual"
 ---
 
-::: callout-note
-You can delete everything in here and start fresh.
-:::
+## Tidyverse challange
 
-This is a `.qmd` file. It is plain text with special features. Any time you write just like this, it will be compiled to normal text in the website. If you put a \# in front of your text, it will create a top level-header.
+Analyse the sale by location with a bar plot. since state and cities are multiple features,they should be split.Replace your bike_orderlines_wrangled_tbl object with the newly wrangled object.
 
-To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+##Running Code
 
-# Text Formatting
-
-*italics* and **bold**
-
-superscript^2^ / subscript~2~
-
-~~strikethrough~~
-
-`verbatim code`
-
-> Blockquote
-
-# Headings
-
-## Header 2
-### Header 3
-#### Header 4
-##### Header 5
-###### Header 6
-
-# Links & Images
-
-<https://quarto.org>
-
-[Quarto](https://quarto.org)
-
-![Caption](../../assets/img/elephant.png)
-
-[![Caption](../../assets/img/elephant.png)](https://quarto.org)
-
-[![Caption](../../assets/img/elephant.png)](https://quarto.org "An elephant")
-
-
-# Lists
-
-* unordered list
-    + sub-item 1
-    + sub-item 2
-        - sub-sub-item 1
-        
-*   item 2
-
-    Continued (indent 4 spaces)
-    
-    
-1. ordered list
-2. item 2
-    i) sub-item 1
-         A.  sub-sub-item 1
-         
-(@)  A list whose numbering
-
-continues after
-
-(@)  an interruption
-
-# Tables
-
-| Right | Left | Default | Center |
-|------:|:-----|---------|:------:|
-|   12  |  12  |    12   |    12  |
-|  123  |  123 |   123   |   123  |
-|    1  |    1 |     1   |     1  |
-
-# Source Code
-
-Use ``` to delimit blocks of source code:
-
-```
-code
-```
-
-Add a language to syntax highlight code blocks:
+#2.0 Load required libraries:
 
 ```{r}
-1 + 1
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+library(lubridate)
+library(writexl)
 ```
 
-```{r}
-cars
-```
+##2.1 Read the data from the files, drive it from the given path
 
 ```{r}
-plot(cars)
+bikes_tbl <- read_excel(path = "C:/Users/dell/Desktop/business data science/tidyverse/ss23-bdsb-mitalikulam/assets/tidyverse/bikes.xlsx")
+orderlines_tbl <- read_excel(path = "C:/Users/dell/Desktop/business data science/tidyverse/ss23-bdsb-mitalikulam/assets/tidyverse/orderlines.xlsx")
+bikeshops_tbl  <- read_excel(path = "C:/Users/dell/Desktop/business data science/tidyverse/ss23-bdsb-mitalikulam/assets/tidyverse/bikeshops.xlsx")
+```
+
+### 2.2 Examin Data
+
+```{r}
+#print it to the console
+orderlines_tbl
+
+```
+
+### 2.3 Joining Data
+
+```{r}
+left_join(orderlines_tbl,bikes_tbl, c("product.id" = "bike.id"))
+
+bike_orderlines_joined_tbl <-orderlines_tbl %>%
+  left_join(bikes_tbl, by = c("product.id" = "bike.id")) %>%
+  left_join(bikeshops_tbl, by = c("customer.id" = "bikeshop.id"))
+
+bike_orderlines_joined_tbl
+```
+
+### 2.4 manipulate the data
+
+```{r}
+bike_states_wrangled_tbl <- bike_orderlines_joined_tbl %>%
+  # 5.1 Separate state and city name
+  separate(location, into = c("city", "state"), sep = ", ") %>%
+  
+
+ 
+  # 5.2 Add the total price (price * quantity) 
+  # Add a column to a tibble that uses a formula-style calculation of other columns
+  mutate(total.price = price * quantity)
+```
+
+##### Select columns and add a year followed by summerizing year and state and then format
+
+```{r}
+sales_by_states_tbl <- bike_states_wrangled_tbl %>%
+
+
+
+  select(order.date, total.price, state) %>%
+  mutate(year = year(order.date)) %>%
+  
+  # Group by and summarize year and states
+  group_by(year, state) %>%
+  summarise(sales = sum(total.price)) %>%
+  ungroup() %>%
+  
+  
+  # Format $ Text
+  mutate(sales_text = scales::dollar(sales, big.mark = ".", 
+                                     decimal.mark = ",", 
+                                     prefix = "", 
+                                     suffix = " €"))
+
+sales_by_states_tbl 
+```
+
+## visulation by getting a graph
+
+```{r}
+sales_by_states_tbl %>%
+  
+  # Set up x, y, fill
+  ggplot(aes(x = year, y = sales, fill = state)) +
+  
+  # to your plotting code to rotate your x-axis labels
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  
+  # Geometries
+  geom_col(fill = "#2DC6D6") + # Use geom_col for a bar plot
+  geom_label(aes(label = sales)) + # Adding labels to the bars
+  geom_smooth(method = "lm", se = FALSE) + # Adding a trendline
+  
+  # Facet
+  facet_wrap(~ state) +
+  
+  # Formatting
+  scale_y_continuous(labels = scales::dollar_format(big.mark = ".", 
+                                                    decimal.mark = ",", 
+                                                    prefix = "", 
+                                                    suffix = " €")) +
+  labs(
+    title = "Revenue by state",
+    subtitle = "Each state has an upward trend",
+    fill = "States" # Changes the legend name
+  )
 ```
